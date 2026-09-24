@@ -149,16 +149,11 @@ npx serve .
 Open the `http://localhost:...` link. Opening `index.html` by double-click will **not** work because the app uses ES modules.
 
 ---
-
 ## 🖼️ Screenshots
-
-> Add your screenshots to a `screenshots/` folder and link them here.
 
 | Sign in | Group | Dashboard |
 |---|---|---|
-| `![](screenshots/login.png)` | `![](screenshots/group.png)` | `![](screenshots/dashboard.png)` |
-
----
+| <img src="screenshots/login.png" width="250"> | <img src="screenshots/group.png" width="250"> | <img src="screenshots/dashboard.png" width="250"> |
 
 ## ⚠️ Known Limitations
 
