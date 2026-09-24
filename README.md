@@ -6,7 +6,7 @@ SplitEase is a web app for splitting shared expenses (trips, dinners, class outi
 
 Built with **HTML, CSS, JavaScript and Firebase**, and it runs entirely on Firebase's **free Spark plan**, with no credit card required.
 
-🔗 **Live demo:** `https://splitease-amey.web.app` *(replace with your link)*
+🔗 **Live demo:** `https://splitease-amey.web.app` 
 
 ---
 
