@@ -1,0 +1,9 @@
+# Firebase
+.firebase/
+firebase-debug.log*
+
+# macOS
+.DS_Store
+
+# Node (only matters if you install packages later)
+node_modules/

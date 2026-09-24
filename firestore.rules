@@ -1,0 +1,145 @@
+rules_version = '2';
+
+// SplitEase — Firestore security rules
+//
+// Collections used by app.js:
+//   users/{uid}         profile: name, email, photoUrl, upiQrUrl, groupId
+//   groups/{groupId}    name, code, memberIds[], createdBy, createdAt
+//   expenses/{id}       groupId, desc, amountInCents, payerId, splitWith[], createdAt
+//   payments/{id}       groupId, fromUserId, toUserId, amountInCents, proofUrl, status, createdAt
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------- helpers
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function me() {
+      return request.auth.uid;
+    }
+
+    function groupPath(gid) {
+      return /databases/$(database)/documents/groups/$(gid);
+    }
+
+    function isMember(gid) {
+      return gid is string
+          && exists(groupPath(gid))
+          && me() in get(groupPath(gid)).data.memberIds;
+    }
+
+    // Fixed: uses valid Firestore regex `.matches()` instead of invalid `.startsWith()`
+    function isNullOrStorageUrl(v) {
+      return v == null
+          || (v is string
+              && ((v.size() <= 1000000 && v.matches('^data:image/.*'))
+                  || (v.size() < 2048 && v.matches('^https://firebasestorage\\.googleapis\\.com/.*'))));
+    }
+
+    // ------------------------------------------------------------------ users
+    match /users/{userId} {
+      allow get: if signedIn();
+      allow list: if false;
+
+      allow create: if signedIn() && userId == me();
+
+      // Allows updating QR without diff failure on existing keys
+      allow update: if signedIn()
+        && userId == me()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['name', 'email', 'photoUrl'])
+        && isNullOrStorageUrl(request.resource.data.upiQrUrl);
+
+      allow delete: if false;
+    }
+
+    // ----------------------------------------------------------------- groups
+    match /groups/{groupId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['name', 'code', 'memberIds', 'createdBy', 'createdAt'])
+        && request.resource.data.keys().hasAll(['name', 'code', 'memberIds', 'createdBy', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 50
+        && request.resource.data.code is string
+        && request.resource.data.code.matches('[0-9]{6}')
+        && request.resource.data.createdBy == me()
+        && request.resource.data.memberIds == [me()]
+        && (request.resource.data.createdAt is int || request.resource.data.createdAt is number);
+
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])
+        && request.resource.data.memberIds.toSet()
+             == resource.data.memberIds.toSet().union([me()].toSet())
+        && request.resource.data.memberIds.size() <= 50;
+
+      allow delete: if false;
+    }
+
+    // --------------------------------------------------------------- expenses
+    function validExpense(d) {
+      let g = get(groupPath(d.groupId)).data;
+      return d.keys().hasOnly(['groupId', 'desc', 'amountInCents', 'payerId', 'splitWith', 'createdAt'])
+          && d.keys().hasAll(['groupId', 'desc', 'amountInCents', 'payerId', 'splitWith', 'createdAt'])
+          && d.desc is string
+          && d.desc.size() > 0
+          && d.desc.size() <= 50
+          && (d.amountInCents is int || d.amountInCents is number)
+          && d.amountInCents > 0
+          && d.amountInCents <= 1000000000
+          && (d.createdAt is int || d.createdAt is number)
+          && d.payerId is string
+          && d.payerId in g.memberIds
+          && d.splitWith is list
+          && d.splitWith.size() >= 1
+          && d.splitWith.size() <= g.memberIds.size()
+          && d.splitWith.toSet().size() == d.splitWith.size()
+          && d.splitWith.toSet().difference(g.memberIds.toSet()).size() == 0
+          && (me() == d.payerId || me() in d.splitWith);
+    }
+
+    match /expenses/{expenseId} {
+      allow get, list: if signedIn()
+        && (me() == resource.data.payerId || me() in resource.data.splitWith);
+
+      allow create: if signedIn()
+        && request.resource.data.groupId is string
+        && isMember(request.resource.data.groupId)
+        && validExpense(request.resource.data);
+
+      allow update: if false;
+      allow delete: if signedIn() && me() == resource.data.payerId;
+    }
+
+    // --------------------------------------------------------------- payments
+    match /payments/{paymentId} {
+      allow get, list: if signedIn()
+        && (me() == resource.data.fromUserId || me() == resource.data.toUserId);
+
+      // Cleaned create validation: removes broken get calls and allows proofUrl
+      allow create: if signedIn()
+        && request.resource.data.fromUserId == me()
+        && request.resource.data.toUserId is string
+        && request.resource.data.toUserId != me()
+        && request.resource.data.groupId is string
+        && request.resource.data.status == 'pending'
+        && (request.resource.data.amountInCents is int || request.resource.data.amountInCents is number)
+        && request.resource.data.amountInCents > 0
+        && (request.resource.data.createdAt is int || request.resource.data.createdAt is number)
+        && isNullOrStorageUrl(request.resource.data.proofUrl);
+
+      // Allows receiver to mark payment as confirmed OR rejected
+      allow update: if signedIn()
+        && me() == resource.data.toUserId
+        && resource.data.status == 'pending'
+        && (request.resource.data.status == 'confirmed' || request.resource.data.status == 'rejected')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+
+      allow delete: if false;
+    }
+
+  }
+}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SplitEase - Private Group Expense Splitter</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== SCREEN 1: LOGIN ===== -->
+<div id="authScreen" class="screen">
+  <div class="card auth-card">
+    <h1>SplitEase</h1>
+    <p class="subtitle">Split expenses. Keep debts private.</p>
+    <button id="googleSignInBtn" class="btn-primary full-width">Sign in with Google</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 2: GROUP GATE (create or join) ===== -->
+<div id="groupGateScreen" class="screen hidden">
+  <div class="card">
+    <div id="myGroupsSection" class="hidden">
+      <h2>Your Groups</h2>
+      <div id="myGroupsList" style="margin-bottom: 20px;"></div>
+      <div class="divider">or create / join another</div>
+    </div>
+
+    <h2>Join or Create a Group</h2>
+    <p class="muted">e.g. "Class 2026" or "Goa Trip"</p>
+
+    <div class="input-row">
+      <input type="text" id="joinCodeInput" placeholder="Enter 6-digit group code" maxlength="6">
+      <button id="joinGroupBtn" class="btn-primary">Join</button>
+    </div>
+
+    <div class="divider">or</div>
+
+    <div class="input-row">
+      <input type="text" id="newGroupNameInput" placeholder="New group name">
+      <button id="createGroupBtn" class="btn-outline">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: MAIN APP ===== -->
+<div id="appScreen" class="screen hidden">
+  <main class="container">
+
+    <!-- Top bar -->
+    <header class="navbar">
+      <div class="navbar-left">
+        <img id="userPhoto" class="avatar" src="" alt="">
+        <div>
+          <div id="userNameLabel" class="navbar-name"></div>
+          <div id="groupNameLabel" class="navbar-sub"></div>
+        </div>
+      </div>
+      <div class="navbar-right">
+        <button id="switchGroupBtn" class="btn-small">My Groups</button>
+        <button id="uploadQrBtn" class="btn-small">My QR</button>
+        <input type="file" id="qrFileInput" accept="image/*" class="hidden">
+        <button id="inviteBtn" class="btn-small">Invite</button>
+        <button id="signOutBtn" class="btn-small-outline">Log out</button>
+      </div>
+    </header>
+
+    <!-- Add Expense -->
+    <section class="card">
+      <h2>Add Expense</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="expDesc">Description</label>
+          <input type="text" id="expDesc" placeholder="e.g. Dinner" maxlength="50">
+        </div>
+        <div class="form-group">
+          <label for="expAmount">Amount (₹)</label>
+          <input type="number" id="expAmount" placeholder="0.00" min="0.01" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="expPayer">Paid By</label>
+          <select id="expPayer"></select>
+        </div>
+      </div>
+      <div class="form-group split-group">
+        <label>Split Between</label>
+        <div id="splitCheckboxes" class="checkbox-grid"></div>
+      </div>
+      <button id="addExpenseBtn" class="btn-primary full-width">Add Expense</button>
+    </section>
+
+    <!-- My Balances (PRIVATE - only this user sees this) -->
+    <section class="card">
+      <h2>My Balances <span class="lock-note">🔒 only visible to you</span></h2>
+      <div id="balancesList"></div>
+    </section>
+
+    <!-- My Expenses -->
+    <section class="card">
+      <h2>My Expenses</h2>
+      <ul id="expenseList" class="item-list"></ul>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== MODAL: Pay someone ===== -->
+<div id="payModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="payModalTitle">Pay</h3>
+    <div id="payModalQrWrap">
+      <p class="muted">Scan this UPI QR to pay:</p>
+      <img id="payModalQrImg" class="qr-preview" src="" alt="UPI QR code">
+    </div>
+    <label class="upload-label">Upload payment proof (screenshot)</label>
+    <input type="file" id="proofFileInput" accept="image/*">
+    <div class="modal-actions">
+      <button id="submitProofBtn" class="btn-primary">Mark as Paid</button>
+      <button id="closePayModalBtn" class="btn-outline">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Confirm a payment someone sent you ===== -->
+<div id="confirmModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="confirmModalTitle">Review Payment</h3>
+    <img id="confirmModalProofImg" class="qr-preview" src="" alt="Payment proof">
+    <div class="modal-actions">
+      <button id="confirmPaymentBtn" class="btn-primary">Confirm Received</button>
+      <button id="rejectPaymentBtn" class="btn-outline" style="color: #ef4444; border-color: #ef4444;">Reject Payment</button>
+      <button id="closeConfirmModalBtn" class="btn-outline">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Invite code ===== -->
+<div id="inviteModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Invite people</h3>
+    <p class="muted">Share this code. They sign in, then enter it on the "Join Group" screen.</p>
+    <div id="inviteCodeDisplay" class="invite-code"></div>
+    <div class="modal-actions">
+      <button id="closeInviteModalBtn" class="btn-outline">Close</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="app.js?t=1002"></script>
+</body>
+</html>
